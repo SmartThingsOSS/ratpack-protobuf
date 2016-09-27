@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package smartthings;
+
+option java_package = "smartthings.ratpack.protobuf";
+option java_outer_classname = "WidgetProtos";
+
+message Widget {
+	string id = 1;
+	string name = 2;
+}
