@@ -1,0 +1,32 @@
+machine:
+  java:
+    version:
+      oraclejdk8
+
+dependencies:
+  override:
+    - sudo pip install codecov
+    - ./gradlew classes testClasses
+
+  cache_directories:
+    - ~/.gradle
+
+test:
+  override:
+    - ./gradlew check jacocoTestReport
+
+  post:
+    - 'find . -type f -name "*.xml" | grep "build/test-results" | xargs cp -t $CIRCLE_TEST_REPORTS/'
+    - 'find . -type f \( -name "*.html" -or -name "*.xml" \) | grep "build/coverage" | xargs cp --parents -t $CIRCLE_TEST_REPORTS/'
+    - codecov --token=${CODECOV_TOKEN}
+
+deployment:
+  snapshot:
+    branch: master
+    commands:
+      - ./gradlew publish -PsmartThingsArtifactoryUserName=$ARTIFACTORY_USERNAME -PsmartThingsArtifactoryPassword=$ARTIFACTORY_PASSWORD
+
+  release:
+    branch: release
+    commands:
+      - ./gradlew bintrayUpload

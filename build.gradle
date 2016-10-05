@@ -1,0 +1,95 @@
+def jvmEncoding = java.nio.charset.Charset.defaultCharset().name()
+if (jvmEncoding != "UTF-8") {
+	throw new IllegalStateException("Build environment must be UTF-8 (it is: $jvmEncoding) - add '-Dfile.encoding=UTF-8' to the GRADLE_OPTS environment variable ")
+}
+
+if (!JavaVersion.current().java8Compatible) {
+	throw new IllegalStateException("Must be built with Java 8 or higher")
+}
+
+buildscript {
+	repositories {
+		jcenter()
+		mavenCentral()
+		maven {
+			url 'https://plugins.gradle.org/m2/'
+		}
+		mavenLocal()
+	}
+
+	dependencies {
+		classpath "gradle.plugin.com.google.protobuf:protobuf-gradle-plugin:0.8.0"
+		classpath "gradle.plugin.io.ratpack:ratpack-gradle:1.4.2"
+		classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.6'
+	}
+}
+
+repositories {
+	mavenLocal()
+	jcenter()
+	maven {
+		credentials {
+			username smartThingsUserName
+			password smartThingsPassword
+		}
+		url "https://smartthings.artifactoryonline.com/smartthings/libs-release-local"
+	}
+	maven {
+		credentials {
+			username smartThingsUserName
+			password smartThingsPassword
+		}
+		url "https://smartthings.artifactoryonline.com/smartthings/libs-snapshot-local"
+	}
+}
+
+group 'smartthings'
+version = rootProject.file('version.txt').text.trim()
+
+apply plugin: "base"
+apply plugin: 'idea'
+apply plugin: 'groovy'
+apply plugin: 'com.google.protobuf'
+
+apply from: rootProject.file('gradle/publish.gradle')
+apply from: rootProject.file('gradle/convention.gradle')
+
+dependencies {
+	compile "com.google.protobuf:protobuf-java:${protocolBufVersion}"
+}
+
+protobuf {
+	// Configure the protoc executable
+	protoc {
+		// Download from repositories
+		artifact = "com.google.protobuf:protoc:${protocolBufVersion}"
+	}
+}
+
+compileJava {
+    options.compilerArgs << "-Xlint:unchecked"
+}
+
+// In this section you declare the dependencies for your production and test code
+dependencies {
+	compile "io.ratpack:ratpack-core:${ratpackVersion}"
+	compile "io.ratpack:ratpack-guice:${ratpackVersion}"
+	compile "io.ratpack:ratpack-rx:${ratpackVersion}"
+	compile 'com.google.code.findbugs:jsr305:3.0.0'
+	compile "com.google.protobuf:protobuf-java:${protocolBufVersion}"
+	compile "com.google.protobuf:protobuf-java-util:${protocolBufVersion}"
+	compile "org.apache.httpcomponents:httpcore:4.4.4";
+
+	testCompile 'org.spockframework:spock-core:1.0-groovy-2.4'
+	testCompile "io.ratpack:ratpack-groovy-test:${ratpackVersion}"
+	testCompile 'cglib:cglib-nodep:3.2.4'
+	testRuntime "org.slf4j:slf4j-api:${slf4jVersion}"
+	testRuntime 'ch.qos.logback:logback-classic:1.1.7'
+}
+
+//make protocol buffers play nicely with intellij
+idea {
+	module {
+        testSourceDirs += file("${protobuf.generatedFilesBaseDir}/test/java")
+	}
+}
