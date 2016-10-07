@@ -19,7 +19,7 @@ artifacts {
 }
 
 if (isSnapshot) {
-	if (project.hasProperty('smartThingsArtifactoryUserName')) {
+	if (project.hasProperty('smartThingsUserName')) {
 		publishing {
 			publications {
 				main(MavenPublication) {
@@ -43,8 +43,8 @@ if (isSnapshot) {
 			repositories {
 				maven {
 					credentials {
-						username smartThingsArtifactoryUserName
-						password smartThingsArtifactoryPassword
+						username smartThingsUserName
+						password smartThingsPassword
 					}
 					url "https://smartthings.artifactoryonline.com/smartthings/libs-snapshot-local"
 				}
