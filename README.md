@@ -6,7 +6,7 @@ Ratpack module for parsing and rendering proto3 Protocol buffers.
 ## Enabling Ratpack Protobuf module
 1) Add ratpack protobuf dependency to Gradle
 ```
-    compile "smartthings:ratpack-protobuf:0.1.0"
+    compile "smartthings:ratpack-protobuf:0.2.0"
 
 ```
 
