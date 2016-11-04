@@ -1,14 +1,18 @@
 package smartthings.ratpack.protobuf;
 
 import ratpack.guice.ConfigurableModule;
+import smartthings.ratpack.protobuf.parsers.ProtobufParser;
+import smartthings.ratpack.protobuf.renderers.ProtobufRenderer;
 
 /**
- * Guice bindings for Smart Things Protobuf Parsing/Rendering.
+ * Guice bindings for SmartThings Protobuf Parsing/Rendering.
  */
 public class ProtobufModule extends ConfigurableModule<ProtobufModule.Config>{
 
     @Override
     protected void configure() {
+        bind(ProtobufParser.class);
+        bind(ProtobufRenderer.class);
     }
 
     /**
