@@ -76,6 +76,23 @@ class ProtobufParserSpec extends Specification {
         0 * _
     }
 
+    def 'it should parse json content type with charset as json'() {
+        given:
+        String json = JsonFormat.printer().print(widget)
+
+        when:
+        requestFixture.body(json, 'application/json;charset=utf-8').handle(new DataHandler())
+
+        then:
+        1 * service.process({ Widget result ->
+            result.id == widget.id
+            result.name == widget.name
+        } as Widget)
+        1 * caffeine.getIfPresent(_) >> null
+        1 * caffeine.put(_, _)
+        0 * _
+    }
+
     def 'it should parse protocol buffers and use cached methods if possible'() {
         when: "first request is issued"
         requestFixture.body(widget.toByteArray(), ContentType.PROTOBUF.getValue())

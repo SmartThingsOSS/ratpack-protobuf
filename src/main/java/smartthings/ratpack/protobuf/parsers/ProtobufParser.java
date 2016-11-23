@@ -45,7 +45,7 @@ public class ProtobufParser extends NoOptParserSupport {
             return null;
         }
 
-        String contentType = getContentType(ctx.getRequest().getContentType().toString());
+        String contentType = getContentType(ctx.getRequest().getContentType().getType());
 
         if (PROTOBUF.getValue().equals(contentType)) {
             Method method = getParseMethod(type);
