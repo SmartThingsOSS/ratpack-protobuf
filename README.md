@@ -75,4 +75,4 @@ but it would look something like:
 ```
 
 5) Now it should just work automatically for parsing and rendering any objects you have defined as protocol buffers,
-with content type set as either ```application/json``` or ```application/x-protobuf```.
+with content type set as either ```application/json``` or ```application/x-protobuf```. 
