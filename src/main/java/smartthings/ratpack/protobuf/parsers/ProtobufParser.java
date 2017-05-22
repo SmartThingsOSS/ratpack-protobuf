@@ -8,6 +8,7 @@ import com.google.inject.Inject;
 import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
 import ratpack.handling.Context;
+import ratpack.http.MediaType;
 import ratpack.http.TypedData;
 import ratpack.parse.NoOptParserSupport;
 import ratpack.util.Types;
@@ -45,12 +46,14 @@ public class ProtobufParser extends NoOptParserSupport {
             return null;
         }
 
-        String contentType = getContentType(ctx.getRequest().getContentType().getType());
+      MediaType  mediaType = ctx.getRequest().getContentType();
+
+        String contentType = getContentType(mediaType.getType());
 
         if (PROTOBUF.getValue().equals(contentType)) {
             Method method = getParseMethod(type);
             return Types.cast(method.invoke(null, requestBody.getBytes()));
-        } else if (JSON.getValue().equals(contentType)) {
+        } else if (mediaType.isJson()) {
             final Message.Builder builder = getMessageBuilder((Class<Message>) type.getRawType());
             jsonParser.merge(
                     requestBody.getText(),

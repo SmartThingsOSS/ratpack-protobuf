@@ -64,7 +64,7 @@ class ProtobufParserSpec extends Specification {
         String json = JsonFormat.printer().print(widget)
 
         when:
-        requestFixture.body(json, "").handle(new DataHandler())
+        requestFixture.body(json, "application/json").handle(new DataHandler())
 
         then:
         1 * service.process({ Widget result ->
