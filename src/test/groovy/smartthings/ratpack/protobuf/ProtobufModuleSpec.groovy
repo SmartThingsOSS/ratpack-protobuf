@@ -28,8 +28,8 @@ class ProtobufModuleSpec extends Specification {
             }
         }.test {
             requestSpec { RequestSpec requestSpec ->
-                requestSpec.headers.add("Accept", ContentType.PROTOBUF.value)
-                requestSpec.body.type(ContentType.PROTOBUF.value)
+                requestSpec.headers.add("Accept", MediaType.PROTOBUF.value)
+                requestSpec.body.type(MediaType.PROTOBUF.value)
                 requestSpec.body.bytes(widget.toByteArray())
             }
             def response = post()

@@ -8,7 +8,7 @@ import ratpack.handling.Handler
 import ratpack.parse.NoSuchParserException
 import ratpack.test.handling.HandlingResult
 import smartthings.ratpack.protobuf.CacheConfig
-import smartthings.ratpack.protobuf.ContentType
+import smartthings.ratpack.protobuf.MediaType
 import smartthings.ratpack.protobuf.ProtobufModule
 import spock.lang.Specification
 import ratpack.test.handling.RequestFixture
@@ -37,7 +37,7 @@ class ProtobufParserSpec extends Specification {
         String json = JsonFormat.printer().print(widget)
 
         when: "first request is issued"
-        requestFixture.body(json, ContentType.JSON.getValue())
+        requestFixture.body(json, ratpack.http.MediaType.APPLICATION_JSON)
                 .handle(new DataHandler())
 
         then: "cache miss, put method in cache"
@@ -50,7 +50,7 @@ class ProtobufParserSpec extends Specification {
         0 * _
 
         when: "a second request is issued"
-        requestFixture.body(widget.toByteArray(), ContentType.JSON.getValue())
+        requestFixture.body(widget.toByteArray(), ratpack.http.MediaType.APPLICATION_JSON)
                 .handle(new DataHandler())
 
         then: "get cached method"
@@ -93,9 +93,26 @@ class ProtobufParserSpec extends Specification {
         0 * _
     }
 
+    def 'it should parse custom vendor json content type with charset as json'() {
+        given:
+        String json = JsonFormat.printer().print(widget)
+
+        when:
+        requestFixture.body(json, 'application/vnd.company+json;charset=utf-8').handle(new DataHandler())
+
+        then:
+        1 * service.process({ Widget result ->
+            result.id == widget.id
+            result.name == widget.name
+        } as Widget)
+        1 * caffeine.getIfPresent(_) >> null
+        1 * caffeine.put(_, _)
+        0 * _
+    }
+
     def 'it should parse protocol buffers and use cached methods if possible'() {
         when: "first request is issued"
-        requestFixture.body(widget.toByteArray(), ContentType.PROTOBUF.getValue())
+        requestFixture.body(widget.toByteArray(), MediaType.PROTOBUF.getValue())
                 .handle(new DataHandler())
 
         then: "cache miss, put method in cache"
@@ -108,7 +125,7 @@ class ProtobufParserSpec extends Specification {
         0 * _
 
         when: "a second request is issued"
-        requestFixture.body(widget.toByteArray(), ContentType.PROTOBUF.getValue())
+        requestFixture.body(widget.toByteArray(), MediaType.PROTOBUF.getValue())
                 .handle(new DataHandler())
 
         then: "get cached method"
@@ -122,7 +139,7 @@ class ProtobufParserSpec extends Specification {
         String json = '''{"somefield":"someval"}'''
 
         when:
-        HandlingResult result = requestFixture.body(json, ContentType.JSON.getValue())
+        HandlingResult result = requestFixture.body(json, ratpack.http.MediaType.APPLICATION_JSON)
                 .handle(new DataHandler())
 
         then:
@@ -136,7 +153,7 @@ class ProtobufParserSpec extends Specification {
         String json = 'badjson'
 
         when:
-        HandlingResult result = requestFixture.body(json, ContentType.JSON.getValue())
+        HandlingResult result = requestFixture.body(json, ratpack.http.MediaType.APPLICATION_JSON)
                 .handle(new DataHandler())
 
         then:
