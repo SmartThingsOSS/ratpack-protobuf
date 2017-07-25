@@ -3,15 +3,12 @@ package smartthings.ratpack.protobuf;
 /**
  * Content types supported by smartthings protocol buffer library.
  */
-public enum ContentType {
-
-    JSON("application/json"),
-    PROTOBUF("application/x-protobuf"),
-    WILDCARD("*/*");
+public enum MediaType {
+    PROTOBUF("application/x-protobuf");
 
     private final String value;
 
-    ContentType(String value) {
+    MediaType(String value) {
         this.value = value;
     }
 

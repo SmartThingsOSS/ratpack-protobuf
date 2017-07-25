@@ -2,31 +2,28 @@ package smartthings.ratpack.protobuf.parsers;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.google.common.base.Strings;
 import com.google.common.reflect.TypeToken;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
 import ratpack.handling.Context;
-import ratpack.http.MediaType;
 import ratpack.http.TypedData;
 import ratpack.parse.NoOptParserSupport;
 import ratpack.util.Types;
 import smartthings.ratpack.protobuf.CacheConfig;
 import smartthings.ratpack.protobuf.ProtobufModule;
-
+import smartthings.ratpack.protobuf.utils.ProtoUtils;
 import java.lang.reflect.Method;
 import java.util.concurrent.TimeUnit;
-
-import static smartthings.ratpack.protobuf.ContentType.*;
 
 /**
  * Smart Things parsing of protocol buffers.
  */
+@Singleton
 public class ProtobufParser extends NoOptParserSupport {
 
     private static final TypeToken<Message> PROTO3_TYPE_TOKEN = TypeToken.of(Message.class);
-
     private JsonFormat.Parser jsonParser;
     private CacheConfig cacheConfig;
     private Cache<Class<Message>, Method> newBuilderMethodCache;
@@ -46,30 +43,19 @@ public class ProtobufParser extends NoOptParserSupport {
             return null;
         }
 
-      MediaType  mediaType = ctx.getRequest().getContentType();
-
-        String contentType = getContentType(mediaType.getType());
-
-        if (PROTOBUF.getValue().equals(contentType)) {
-            Method method = getParseMethod(type);
-            return Types.cast(method.invoke(null, requestBody.getBytes()));
-        } else if (mediaType.isJson()) {
+        if (requestBody.getContentType().isJson()) {
             final Message.Builder builder = getMessageBuilder((Class<Message>) type.getRawType());
             jsonParser.merge(
-                    requestBody.getText(),
-                    builder
+                requestBody.getText(),
+                builder
             );
             return Types.cast(builder.build());
+        } else if (ProtoUtils.isProtobuf(requestBody.getContentType())) {
+            Method method = getParseMethod(type);
+            return Types.cast(method.invoke(null, requestBody.getBytes()));
         }
 
         return null;
-    }
-
-    private static String getContentType(String contentType) {
-        if (Strings.isNullOrEmpty(contentType)) {
-            return JSON.getValue();
-        }
-        return contentType;
     }
 
     private Message.Builder getMessageBuilder(Class<Message> type) throws Exception {

@@ -68,6 +68,7 @@ but it would look something like:
 4) Add config properties to your project's .yml file, something like:
 ```
     protobuf:
+      defaultRenderer: "JSON" # Informs ProtobufRenderer what to do when a match is not found on Accept header.
       cache:
         maximumSize: 1000
         minutesTTL: 60

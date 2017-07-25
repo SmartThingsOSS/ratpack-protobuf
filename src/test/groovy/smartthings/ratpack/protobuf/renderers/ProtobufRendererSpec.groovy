@@ -1,107 +1,142 @@
 package smartthings.ratpack.protobuf.renderers
 
-import com.google.protobuf.Message
-import com.google.protobuf.StringValue
-import com.google.protobuf.util.JsonFormat
-import ratpack.handling.Context
-import ratpack.http.Headers
-import ratpack.http.Request
-import ratpack.http.Response
-import ratpack.test.handling.RequestFixture
+import io.netty.handler.codec.http.HttpHeaderNames
+import ratpack.groovy.test.embed.GroovyEmbeddedApp
+import ratpack.guice.Guice
+import ratpack.http.HttpMethod
+import ratpack.http.client.ReceivedResponse
+import ratpack.test.embed.EmbeddedApp
+import smartthings.ratpack.protobuf.ProtobufModule
 import smartthings.ratpack.protobuf.WidgetProtos
+import smartthings.ratpack.protobuf.parsers.ProtobufParser
+import spock.lang.AutoCleanup
 import spock.lang.Specification
 import spock.lang.Unroll
 
-import static smartthings.ratpack.protobuf.ContentType.*
-
 class ProtobufRendererSpec extends Specification {
 
-    ProtobufRenderer renderer
-    WidgetProtos.Widget widget
-    RequestFixture requestFixture
-    Context context
-    Request request
-    Headers headers
-    Response response
-
-    def setup() {
-        renderer = new ProtobufRenderer();
-        widget = WidgetProtos.Widget.newBuilder().setId("superid").setName("superwidget").build()
-        requestFixture = RequestFixture.requestFixture()
-        requestFixture.registry { r ->
-            r.add(ProtobufRenderer, new ProtobufRenderer())
+    @AutoCleanup
+    EmbeddedApp app1 = GroovyEmbeddedApp.of({ spec ->
+        registry(Guice.registry { bindings ->
+            bindings.bind(ProtobufParser.class)
+            bindings.bind(ProtobufRenderer.class)
+        })
+        .handlers {
+            get('widget', { ctx ->
+                ctx.render(
+                    WidgetProtos.Widget.newBuilder().setId("superid").setName("superwidget").build()
+                )
+            })
         }
-        context = Mock()
-        request = Mock()
-        headers = Mock()
-        response = Mock()
+    })
+
+    @AutoCleanup
+    EmbeddedApp app2 = GroovyEmbeddedApp.of({ spec ->
+        registry(Guice.registry { bindings ->
+            ProtobufModule.Config config = new ProtobufModule.Config()
+            config.with {
+                defaultRenderer = ProtobufModule.DefaultRenderer.PROTOBUF
+            }
+            bindings.bindInstance(ProtobufModule.Config.class, config)
+            bindings.bind(ProtobufParser.class)
+            bindings.bind(ProtobufRenderer.class)
+        })
+        .handlers {
+            get('widget', { ctx ->
+                ctx.render(
+                        WidgetProtos.Widget.newBuilder().setId("superid").setName("superwidget").build()
+                )
+            })
+        }
+    })
+
+    @AutoCleanup
+    EmbeddedApp app3 = GroovyEmbeddedApp.of({ spec ->
+        registry(Guice.registry { bindings ->
+            ProtobufModule.Config config = new ProtobufModule.Config()
+            config.with {
+                defaultRenderer = ProtobufModule.DefaultRenderer.ERROR_406
+            }
+            bindings.bindInstance(ProtobufModule.Config.class, config)
+            bindings.bind(ProtobufParser.class)
+            bindings.bind(ProtobufRenderer.class)
+        })
+                .handlers {
+            get('widget', { ctx ->
+                ctx.render(
+                        WidgetProtos.Widget.newBuilder().setId("superid").setName("superwidget").build()
+                )
+            })
+        }
+    })
+
+    void setup() {
     }
 
     @Unroll
-    def 'it should render json for contentType=#desc'() {
-        given:
-        String json = JsonFormat.printer().print(widget)
-        Message message = StringValue.newBuilder().setValue(json).build()
-
+    void 'it should render for mediaType=#inputMediaType'() {
         when:
-        renderer.render(context, message)
+        ReceivedResponse response = app1.httpClient.request('widget',{ spec ->
+            spec.headers({ headers ->
+                headers.set(HttpHeaderNames.CONTENT_TYPE, inputMediaType)
+                headers.set(HttpHeaderNames.ACCEPT, inputMediaType)
+            })
+            spec.method(HttpMethod.GET)
+        })
 
         then:
-        1 * context.getRequest() >> request
-        1 * request.getHeaders() >> headers
-        1 * headers.get("Accept") >> inputContentType
-        1 * context.getResponse() >> response
-        1 * response.send(*_) >> { CharSequence contentType, String body ->
-            assert contentType == expectedContentType
-            String simpleJson = body.replaceAll(/\\n\s?/, "").replaceAll("\\\\", "").replaceAll(/\s"/, '"')
-            assert '''"{"id":"superid","name":"superwidget"}"''' == simpleJson
-        }
-
+        assert response.getStatusCode() == 200
+        assert response.headers.get('Content-Type') == expectedMediaType
+        assert Integer.parseInt(response.headers.get('Content-Length')) > 0
         0 * _
 
         where:
-        inputContentType    | expectedContentType | desc
-        JSON.getValue()     | JSON.getValue()     | JSON.getValue()
-        WILDCARD.getValue() | JSON.getValue()     | JSON.getValue()
-        ""                  | JSON.getValue()     | "empty string"
-        null                | JSON.getValue()     | "null"
+        inputMediaType                     | expectedMediaType
+        'application/json'                 | 'application/json'
+        'application/vnd.company+json'     | 'application/json'
+        'application/x-protobuf'           | 'application/x-protobuf'
+        'application/vnd.company+protobuf' | 'application/x-protobuf'
+        'garbage'                          | 'application/json'
     }
 
-    def 'it should render protobuf'() {
-        given:
-        String expectedContentType = PROTOBUF.getValue()
-
+    @Unroll
+    void 'it should allow changes default render to proto [mediaType=#inputMediaType]'() {
         when:
-        renderer.render(context, widget)
+        ReceivedResponse response = app2.httpClient.request('widget',{ spec ->
+            spec.headers({ headers ->
+                headers.set(HttpHeaderNames.CONTENT_TYPE, inputMediaType)
+                headers.set(HttpHeaderNames.ACCEPT, inputMediaType)
+            })
+            spec.method(HttpMethod.GET)
+        })
 
         then:
-        1 * context.getRequest() >> request
-        1 * request.getHeaders() >> headers
-        1 * headers.get("Accept") >> expectedContentType
-        1 * context.getResponse() >> response
-        1 * response.send(*_) >> { CharSequence contentType, byte[] bytes ->
-            assert contentType == expectedContentType
-            assert bytes == widget.toByteArray()
-        }
-
+        assert response.getStatusCode() == 200
+        assert response.headers.get('Content-Type') == expectedMediaType
+        assert Integer.parseInt(response.headers.get('Content-Length')) > 0
         0 * _
+
+        where:
+        inputMediaType                     | expectedMediaType
+        'application/json'                 | 'application/json'
+        'application/vnd.company+json'     | 'application/json'
+        'application/x-protobuf'           | 'application/x-protobuf'
+        'application/vnd.company+protobuf' | 'application/x-protobuf'
+        'garbage'                          | 'application/x-protobuf'
     }
 
-    def 'it should throw 406 error otherwise'() {
-        given:
-        String expectedContentType = "application/marmalade"
-
+    void 'it should all default render to be 406 error'() {
         when:
-        renderer.render(context, widget)
+        ReceivedResponse response = app3.httpClient.request('widget',{ spec ->
+            spec.headers({ headers ->
+                headers.set(HttpHeaderNames.CONTENT_TYPE, 'garbage')
+                headers.set(HttpHeaderNames.ACCEPT, 'garbage')
+            })
+            spec.method(HttpMethod.GET)
+        })
 
         then:
-        1 * context.getRequest() >> request
-        1 * request.getHeaders() >> headers
-        1 * headers.get("Accept") >> expectedContentType
-        2 * context.getResponse() >> response
-        1 * response.status(406)
-        1 * response.send('application/json', '{"type":"NotAcceptable","message":"Unsupported content type [application/marmalade]. Supported types are [application/json, application/x-protobuf]"}')
-
+        assert response.getStatusCode() == 406
         0 * _
     }
 }
