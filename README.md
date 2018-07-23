@@ -1,7 +1,7 @@
 # ratpack-protobuf
 Ratpack module for parsing and rendering proto3 Protocol buffers.
 
-[![codecov](https://codecov.io/gh/SmartThingsOSS/ratpack-protobuf/branch/master/graph/badge.svg)](https://codecov.io/gh/SmartThingsOSS/ratpack-protobuf)
+[![CircleCI](https://circleci.com/gh/SmartThingsOSS/ratpack-protobuf.svg?style=svg)](https://circleci.com/gh/SmartThingsOSS/ratpack-protobuf) [![codecov](https://codecov.io/gh/SmartThingsOSS/ratpack-protobuf/branch/master/graph/badge.svg)](https://codecov.io/gh/SmartThingsOSS/ratpack-protobuf)
 
 ## Enabling Ratpack Protobuf module
 1) Add ratpack protobuf dependency to Gradle
@@ -44,7 +44,7 @@ NB: Make sure you're using the latest version of gradle!!
     dependencies {
         compile "com.google.protobuf:protobuf-java:3.0.0"
         compile "com.google.protobuf:protobuf-java-util:3.0.0"
-    }
+    } 
     
     //If using Intellij, allow it to recognize the protobuf objects in your project.
     idea {
